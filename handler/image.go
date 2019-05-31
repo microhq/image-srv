@@ -43,15 +43,13 @@ func (h *Image) Upload(ctx context.Context, stream pb.Image_UploadStream) error 
 
 	var id string
 	var albumId string
-	defer stream.Close()
 
 	// request stream object to upload the blob via
 	blobStream, err := h.Client.Put(ctx)
 	if err != nil {
-		log.Logf("failed to establish stream connection to blob.Service")
+		log.Logf("failed to start stream with blob.Service")
 		return fmt.Errorf("failed to upload image: %s", err)
 	}
-	defer blobStream.Close()
 
 	for {
 		img, err := stream.Recv()
@@ -68,12 +66,20 @@ func (h *Image) Upload(ctx context.Context, stream pb.Image_UploadStream) error 
 		albumId = img.AlbumId
 		id = img.Id
 
-		log.Logf("Received %d bytes of image: %s", len(img.Data))
+		log.Logf("received %d bytes of image: %s", len(img.Data), id)
 
 		if err := blobStream.Send(&blob.PutReq{Id: id, BucketId: albumId, Data: img.Data}); err != nil {
 			log.Logf("error streaming blob %s/%s: %s", albumId, id, err)
 			break
 		}
+	}
+
+	log.Logf("closing stream socket")
+
+	// close stream when done sending
+	if err := blobStream.Close(); err != nil {
+		log.Logf("error closing stream socket: %s", err)
+		return err
 	}
 
 	return nil
@@ -82,23 +88,53 @@ func (h *Image) Upload(ctx context.Context, stream pb.Image_UploadStream) error 
 func (h *Image) Download(ctx context.Context, req *pb.DownloadImageReq, stream pb.Image_DownloadStream) error {
 	log.Logf("Received request to download image")
 
+	// request stream to use for blob download
+	blobStream, err := h.Client.Get(ctx, &blob.GetReq{Id: req.Id, BucketId: req.AlbumId})
+	if err != nil {
+		log.Logf("failed to get download file: %s", err)
+		return fmt.Errorf("failed to download image: %s", err)
+	}
+
+	for {
+		img, err := blobStream.Recv()
+		if err == io.EOF {
+			log.Logf("finished receiving image data")
+			break
+		}
+
+		if err != nil {
+			log.Logf("error retrieving image %s: %s", req.Id, err)
+			return err
+		}
+
+		log.Logf("received %d bytes of image: %s", len(img.Data), req.Id)
+
+		if err := stream.Send(&pb.DownloadImageResp{Data: img.Data}); err != nil {
+			log.Logf("error streaming image %s/%s: %s", req.AlbumId, req.Id, err)
+			break
+		}
+	}
+
+	log.Logf("closing stream socket")
+
+	// close stream when done sending
+	if err := stream.Close(); err != nil {
+		log.Logf("failed to close stream socket: %s", err)
+		return err
+	}
+
 	return nil
 }
 
-func (h *Image) Delete(context.Context, *pb.DeleteImageReq, *pb.DeleteImageResp) error {
+func (h *Image) Delete(ctx context.Context, req *pb.DeleteImageReq, resp *pb.DeleteImageResp) error {
 	log.Logf("Received request to delete image")
 
-	return nil
-}
-
-func (h *Image) Share(context.Context, *pb.ShareImageReq, *pb.ShareImageResp) error {
-	log.Logf("Received request to share image")
-
-	return nil
-}
-
-func (h *Image) Unshare(context.Context, *pb.UnshareImageReq, *pb.UnshareImageResp) error {
-	log.Logf("Received request to unshare image")
+	// request stream to use for blob download
+	_, err := h.Client.Delete(ctx, &blob.DeleteReq{Id: req.Id, BucketId: req.AlbumId})
+	if err != nil {
+		log.Logf("failed to delete image %s/%s: %s", req.Id, req.AlbumId, err)
+		return fmt.Errorf("failed to delete image %s: %s", req.Id, err)
+	}
 
 	return nil
 }

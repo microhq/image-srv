@@ -8,8 +8,6 @@ service Image {
         rpc Upload(stream UploadImageReq) returns (UploadImageResp) {}
         rpc Download(DownloadImageReq) returns (stream DownloadImageResp) {}
         rpc Delete(DeleteImageReq) returns (DeleteImageResp) {}
-        rpc Share(ShareImageReq) returns (ShareImageResp) {}
-        rpc Unshare(UnshareImageReq) returns (UnshareImageResp) {}
 }
 
 message CreateAlbumReq {
@@ -47,19 +45,3 @@ message DeleteImageReq {
 }
 
 message DeleteImageResp {}
-
-message ShareImageReq {
-        string id = 1;
-        string album_id = 2;
-}
-
-message ShareImageResp {
-        string url = 1;
-}
-
-message UnshareImageReq {
-        string id = 1;
-        string album_id = 2;
-}
-
-message UnshareImageResp {}

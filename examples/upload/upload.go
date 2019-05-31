@@ -85,6 +85,7 @@ func main() {
 		n, err := file.Read(buf)
 		if err == io.EOF {
 			upload = false
+			log.Logf("finished uploading image: %s", imgPath)
 			break
 		}
 

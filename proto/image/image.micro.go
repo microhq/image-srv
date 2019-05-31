@@ -39,8 +39,6 @@ type ImageService interface {
 	Upload(ctx context.Context, opts ...client.CallOption) (Image_UploadService, error)
 	Download(ctx context.Context, in *DownloadImageReq, opts ...client.CallOption) (Image_DownloadService, error)
 	Delete(ctx context.Context, in *DeleteImageReq, opts ...client.CallOption) (*DeleteImageResp, error)
-	Share(ctx context.Context, in *ShareImageReq, opts ...client.CallOption) (*ShareImageResp, error)
-	Unshare(ctx context.Context, in *UnshareImageReq, opts ...client.CallOption) (*UnshareImageResp, error)
 }
 
 type imageService struct {
@@ -171,26 +169,6 @@ func (c *imageService) Delete(ctx context.Context, in *DeleteImageReq, opts ...c
 	return out, nil
 }
 
-func (c *imageService) Share(ctx context.Context, in *ShareImageReq, opts ...client.CallOption) (*ShareImageResp, error) {
-	req := c.c.NewRequest(c.name, "Image.Share", in)
-	out := new(ShareImageResp)
-	err := c.c.Call(ctx, req, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *imageService) Unshare(ctx context.Context, in *UnshareImageReq, opts ...client.CallOption) (*UnshareImageResp, error) {
-	req := c.c.NewRequest(c.name, "Image.Unshare", in)
-	out := new(UnshareImageResp)
-	err := c.c.Call(ctx, req, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // Server API for Image service
 
 type ImageHandler interface {
@@ -199,8 +177,6 @@ type ImageHandler interface {
 	Upload(context.Context, Image_UploadStream) error
 	Download(context.Context, *DownloadImageReq, Image_DownloadStream) error
 	Delete(context.Context, *DeleteImageReq, *DeleteImageResp) error
-	Share(context.Context, *ShareImageReq, *ShareImageResp) error
-	Unshare(context.Context, *UnshareImageReq, *UnshareImageResp) error
 }
 
 func RegisterImageHandler(s server.Server, hdlr ImageHandler, opts ...server.HandlerOption) error {
@@ -210,8 +186,6 @@ func RegisterImageHandler(s server.Server, hdlr ImageHandler, opts ...server.Han
 		Upload(ctx context.Context, stream server.Stream) error
 		Download(ctx context.Context, stream server.Stream) error
 		Delete(ctx context.Context, in *DeleteImageReq, out *DeleteImageResp) error
-		Share(ctx context.Context, in *ShareImageReq, out *ShareImageResp) error
-		Unshare(ctx context.Context, in *UnshareImageReq, out *UnshareImageResp) error
 	}
 	type Image struct {
 		image
@@ -304,12 +278,4 @@ func (x *imageDownloadStream) Send(m *DownloadImageResp) error {
 
 func (h *imageHandler) Delete(ctx context.Context, in *DeleteImageReq, out *DeleteImageResp) error {
 	return h.ImageHandler.Delete(ctx, in, out)
-}
-
-func (h *imageHandler) Share(ctx context.Context, in *ShareImageReq, out *ShareImageResp) error {
-	return h.ImageHandler.Share(ctx, in, out)
-}
-
-func (h *imageHandler) Unshare(ctx context.Context, in *UnshareImageReq, out *UnshareImageResp) error {
-	return h.ImageHandler.Unshare(ctx, in, out)
 }
