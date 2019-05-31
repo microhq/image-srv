@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package go.micro.srv.image;
+
+service Image {
+        rpc CreateAlbum(CreateAlbumReq) returns (CreateAlbumResp) {}
+        rpc DeleteAlbum(DeleteAlbumReq) returns (DeleteAlbumResp) {}
+        rpc Upload(stream UploadImageReq) returns (UploadImageResp) {}
+        rpc Download(DownloadImageReq) returns (stream DownloadImageResp) {}
+        rpc Delete(DeleteImageReq) returns (DeleteImageResp) {}
+        rpc Share(ShareImageReq) returns (ShareImageResp) {}
+        rpc Unshare(UnshareImageReq) returns (UnshareImageResp) {}
+}
+
+message CreateAlbumReq {
+        string id = 1;
+}
+
+message CreateAlbumResp{}
+
+message DeleteAlbumReq {
+        string id = 1;
+}
+
+message DeleteAlbumResp{}
+
+message UploadImageReq {
+        string id = 1;
+        string album_id = 2;
+        bytes data = 3;
+}
+
+message UploadImageResp {}
+
+message DownloadImageReq {
+        string id = 1;
+        string album_id = 2;
+}
+
+message DownloadImageResp {
+        bytes data = 1;
+}
+
+message DeleteImageReq {
+        string id = 1;
+        string album_id = 2;
+}
+
+message DeleteImageResp {}
+
+message ShareImageReq {
+        string id = 1;
+        string album_id = 2;
+}
+
+message ShareImageResp {
+        string url = 1;
+}
+
+message UnshareImageReq {
+        string id = 1;
+        string album_id = 2;
+}
+
+message UnshareImageResp {}
