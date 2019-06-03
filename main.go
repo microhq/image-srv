@@ -21,7 +21,7 @@ func main() {
 
 	// Register Handler
 	pb.RegisterImageHandler(service.Server(), &handler.Image{
-		Client: blob.NewBlobService("go.micro.srv.blob", service.Client()),
+		Blob: blob.NewBlobService("go.micro.srv.blob", service.Client()),
 	})
 
 	// Run service

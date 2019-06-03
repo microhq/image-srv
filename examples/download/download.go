@@ -55,6 +55,17 @@ func main() {
 	// Initialize service client
 	client := pb.NewImageService("go.micro.srv.image", service.Client())
 
+	// List all images in given album
+	images, err := client.List(context.Background(), &pb.ListImageReq{AlbumId: albumName})
+	if err != nil {
+		log.Logf("failed to list images in album %s: %s", albumName, err)
+		return
+	}
+
+	for _, img := range images.Id {
+		log.Logf("image: %s", img)
+	}
+
 	file, err := os.OpenFile(imgPath, os.O_RDWR|os.O_CREATE, 0640)
 	if err != nil {
 		log.Logf("failed to open file %s: %s", imgPath, err)

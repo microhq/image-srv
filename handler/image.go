@@ -10,15 +10,20 @@ import (
 	pb "github.com/microhq/image-srv/proto/image"
 )
 
+// Image implements image service handler
 type Image struct {
-	Client blob.BlobService
+	// Blob is blob-srv client
+	Blob blob.BlobService
 }
 
+// CreateAlbum creates new image album and returns it.
+// It calls blob-srv which handles the low level filesystem operations.
+// It returns error if the blob-srv fails to allocate dedicated filesystem for the album.
 func (h *Image) CreateAlbum(ctx context.Context, req *pb.CreateAlbumReq, resp *pb.CreateAlbumResp) error {
 	log.Logf("Received request to create new album")
 
 	// Create bucket with album name
-	if _, err := h.Client.CreateBucket(ctx, &blob.CreateBucketReq{Id: req.Id}); err != nil {
+	if _, err := h.Blob.CreateBucket(ctx, &blob.CreateBucketReq{Id: req.Id}); err != nil {
 		log.Logf("failed to create album bucket: %s", err)
 		return fmt.Errorf("failed to create new album: %s", req.Id)
 	}
@@ -26,11 +31,14 @@ func (h *Image) CreateAlbum(ctx context.Context, req *pb.CreateAlbumReq, resp *p
 	return nil
 }
 
+// DeleteAlbum deletes image album.
+// It calls blob-srv to delete the album from the physical storage.
+// It returns error if the album failed to be removed from storage.
 func (h *Image) DeleteAlbum(ctx context.Context, req *pb.DeleteAlbumReq, resp *pb.DeleteAlbumResp) error {
 	log.Logf("Received request to delete existing album")
 
 	// Delete bucket with album name
-	if _, err := h.Client.DeleteBucket(ctx, &blob.DeleteBucketReq{Id: req.Id}); err != nil {
+	if _, err := h.Blob.DeleteBucket(ctx, &blob.DeleteBucketReq{Id: req.Id}); err != nil {
 		log.Logf("failed to delete album bucket: %s", err)
 		return fmt.Errorf("failed to delete album: %s", req.Id)
 	}
@@ -38,6 +46,9 @@ func (h *Image) DeleteAlbum(ctx context.Context, req *pb.DeleteAlbumReq, resp *p
 	return nil
 }
 
+// Upload uploads image to remote server image album.
+// It relies on blob-srv to store the image.
+// It returns error if the image failed to be stored by blob-srv.
 func (h *Image) Upload(ctx context.Context, stream pb.Image_UploadStream) error {
 	log.Logf("Received request to upload image")
 
@@ -45,7 +56,7 @@ func (h *Image) Upload(ctx context.Context, stream pb.Image_UploadStream) error 
 	var albumId string
 
 	// request stream object to upload the blob via
-	blobStream, err := h.Client.Put(ctx)
+	blobStream, err := h.Blob.Put(ctx)
 	if err != nil {
 		log.Logf("failed to start stream with blob.Service")
 		return fmt.Errorf("failed to upload image: %s", err)
@@ -74,22 +85,17 @@ func (h *Image) Upload(ctx context.Context, stream pb.Image_UploadStream) error 
 		}
 	}
 
-	log.Logf("closing stream socket")
-
-	// close stream when done sending
-	if err := blobStream.Close(); err != nil {
-		log.Logf("error closing stream socket: %s", err)
-		return err
-	}
-
 	return nil
 }
 
+// Download uploads image from server image album.
+// It relies on blob-srv to retrieve the image from remote filesystem.
+// It returns error if the image failed to be retrieved from blob-srv.
 func (h *Image) Download(ctx context.Context, req *pb.DownloadImageReq, stream pb.Image_DownloadStream) error {
 	log.Logf("Received request to download image")
 
 	// request stream to use for blob download
-	blobStream, err := h.Client.Get(ctx, &blob.GetReq{Id: req.Id, BucketId: req.AlbumId})
+	blobStream, err := h.Blob.Get(ctx, &blob.GetReq{Id: req.Id, BucketId: req.AlbumId})
 	if err != nil {
 		log.Logf("failed to get download file: %s", err)
 		return fmt.Errorf("failed to download image: %s", err)
@@ -115,26 +121,38 @@ func (h *Image) Download(ctx context.Context, req *pb.DownloadImageReq, stream p
 		}
 	}
 
-	log.Logf("closing stream socket")
+	return nil
+}
 
-	// close stream when done sending
-	if err := stream.Close(); err != nil {
-		log.Logf("failed to close stream socket: %s", err)
-		return err
+// Delete deletes the image from the given album
+// It relies on blob-srv to delete the image from the physical storage.
+// It returns error if the image failed to be removed.
+func (h *Image) Delete(ctx context.Context, req *pb.DeleteImageReq, resp *pb.DeleteImageResp) error {
+	log.Logf("Received request to delete image")
+
+	// request stream to use for blob download
+	_, err := h.Blob.Delete(ctx, &blob.DeleteReq{Id: req.Id, BucketId: req.AlbumId})
+	if err != nil {
+		log.Logf("failed to delete image %s/%s: %s", req.Id, req.AlbumId, err)
+		return fmt.Errorf("failed to delete image %s: %s", req.Id, err)
 	}
 
 	return nil
 }
 
-func (h *Image) Delete(ctx context.Context, req *pb.DeleteImageReq, resp *pb.DeleteImageResp) error {
-	log.Logf("Received request to delete image")
+// List lists images in given album.
+// It returns error if the images failed to be listed.
+func (h *Image) List(ctx context.Context, req *pb.ListImageReq, resp *pb.ListImageResp) error {
+	log.Logf("Received request to list images")
 
-	// request stream to use for blob download
-	_, err := h.Client.Delete(ctx, &blob.DeleteReq{Id: req.Id, BucketId: req.AlbumId})
+	// list all available images in given album
+	imgs, err := h.Blob.List(ctx, &blob.ListReq{BucketId: req.AlbumId})
 	if err != nil {
-		log.Logf("failed to delete image %s/%s: %s", req.Id, req.AlbumId, err)
-		return fmt.Errorf("failed to delete image %s: %s", req.Id, err)
+		log.Logf("failed to list images in album %s: %s", req.AlbumId, err)
+		return err
 	}
+
+	resp.Id = imgs.Id
 
 	return nil
 }

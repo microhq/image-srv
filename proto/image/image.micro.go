@@ -39,6 +39,7 @@ type ImageService interface {
 	Upload(ctx context.Context, opts ...client.CallOption) (Image_UploadService, error)
 	Download(ctx context.Context, in *DownloadImageReq, opts ...client.CallOption) (Image_DownloadService, error)
 	Delete(ctx context.Context, in *DeleteImageReq, opts ...client.CallOption) (*DeleteImageResp, error)
+	List(ctx context.Context, in *ListImageReq, opts ...client.CallOption) (*ListImageResp, error)
 }
 
 type imageService struct {
@@ -169,6 +170,16 @@ func (c *imageService) Delete(ctx context.Context, in *DeleteImageReq, opts ...c
 	return out, nil
 }
 
+func (c *imageService) List(ctx context.Context, in *ListImageReq, opts ...client.CallOption) (*ListImageResp, error) {
+	req := c.c.NewRequest(c.name, "Image.List", in)
+	out := new(ListImageResp)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Image service
 
 type ImageHandler interface {
@@ -177,6 +188,7 @@ type ImageHandler interface {
 	Upload(context.Context, Image_UploadStream) error
 	Download(context.Context, *DownloadImageReq, Image_DownloadStream) error
 	Delete(context.Context, *DeleteImageReq, *DeleteImageResp) error
+	List(context.Context, *ListImageReq, *ListImageResp) error
 }
 
 func RegisterImageHandler(s server.Server, hdlr ImageHandler, opts ...server.HandlerOption) error {
@@ -186,6 +198,7 @@ func RegisterImageHandler(s server.Server, hdlr ImageHandler, opts ...server.Han
 		Upload(ctx context.Context, stream server.Stream) error
 		Download(ctx context.Context, stream server.Stream) error
 		Delete(ctx context.Context, in *DeleteImageReq, out *DeleteImageResp) error
+		List(ctx context.Context, in *ListImageReq, out *ListImageResp) error
 	}
 	type Image struct {
 		image
@@ -278,4 +291,8 @@ func (x *imageDownloadStream) Send(m *DownloadImageResp) error {
 
 func (h *imageHandler) Delete(ctx context.Context, in *DeleteImageReq, out *DeleteImageResp) error {
 	return h.ImageHandler.Delete(ctx, in, out)
+}
+
+func (h *imageHandler) List(ctx context.Context, in *ListImageReq, out *ListImageResp) error {
+	return h.ImageHandler.List(ctx, in, out)
 }

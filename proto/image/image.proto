@@ -8,6 +8,7 @@ service Image {
         rpc Upload(stream UploadImageReq) returns (UploadImageResp) {}
         rpc Download(DownloadImageReq) returns (stream DownloadImageResp) {}
         rpc Delete(DeleteImageReq) returns (DeleteImageResp) {}
+        rpc List(ListImageReq) returns (ListImageResp) {}
 }
 
 message CreateAlbumReq {
@@ -45,3 +46,11 @@ message DeleteImageReq {
 }
 
 message DeleteImageResp {}
+
+message ListImageReq {
+        string album_id = 1;
+}
+
+message ListImageResp {
+        repeated string id = 1;
+}
